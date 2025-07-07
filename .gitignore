@@ -16,7 +16,6 @@ ENV/
 
 # Dados temporários ou sensíveis
 *.csv
-*.xlsx
 *.json
 *.db
 *.sqlite3
