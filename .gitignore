@@ -1,0 +1,37 @@
+# Arquivos Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pkl
+
+# Ambientes virtuais
+.venv/
+venv/
+env/
+ENV/
+
+# Arquivos de configuração do Streamlit
+.streamlit/secrets.toml
+
+# Dados temporários ou sensíveis
+*.csv
+*.xlsx
+*.json
+*.db
+*.sqlite3
+
+# Cache e relatórios de testes
+*.log
+*.coverage
+.cache/
+.pytest_cache/
+.mypy_cache/
+
+# IDEs
+.vscode/
+.idea/
+
+# Streamlit storage
+streamlit-storage/
+
