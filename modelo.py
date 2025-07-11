@@ -1,28 +1,43 @@
 from docx import Document
 
-modelo = 'Modelo Plano de AULA.docx'
+def substituir_texto(paragrafo, mapa):
+    for run in paragrafo.runs:
+        for chave, valor in mapa.items():
+            if chave in run.text:
+                run.text = run.text.replace(chave, valor)
 
-arquivoWord = Document(modelo)
+def substituir(modelo_path, nome, disciplina, serie,
+               objeto_conhecimento, habilidades, atividades,
+               recursos, estrategias, recuperacao):
 
-def substituir(nome,
-               disciplina,
-               serie,
-               objeto_conhecimento,
-               habilidades,
-               atividades,
-               recursos,
-               estrategias,
-               recuperação
-    ):
+    documento = Document(modelo_path)
 
-    for paragrafo in arquivoWord.paragraphs:
-        if "{Nome}" in paragrafo.text:
-            paragrafo.text = paragrafo.text.replace("{Nome}", nome)
-        if "{Disciplina}" in paragrafo.text:
-            paragrafo.text = paragrafo.text.replace('{Disciplina}', disciplina)
+    placeholders = {
+        "{Nome}": nome,
+        "{Disciplina}": disciplina,
+        "{Ano_turma}": serie,
+        "{Objeto_conhecimento}": objeto_conhecimento,
+        "{Habilidades}": habilidades,
+        "{Atividades}": atividades,
+        "{Recursos}": recursos,
+        "{Estratégias}": estrategias,
+        "{Recuperação}": recuperacao
+    }
+
+    for paragrafo in documento.paragraphs:
+        substituir_texto(paragrafo, placeholders)
+
+    for tabela in documento.tables:
+        for linha in tabela.rows:
+            for celula in linha.cells:
+                for paragrafo in celula.paragraphs:
+                    substituir_texto(paragrafo, placeholders)
+
+    caminho = f'./Plano_{nome}.docx'
+    documento.save(caminho)
+            
     
-            
-    caminho = './Plano_' + nome + '.docx'
+if __name__ == '__main__':
+    substituir('C://Users//ander//OneDrive//Documentos//forms_plano//Modelo Plano de AULA.docx','Anderson','Matemática', '3ª', 'Objeto', 'Skills', 'activity', 'resources','strategy','Rec')
 
-    arquivoWord.save(caminho)
-            
+

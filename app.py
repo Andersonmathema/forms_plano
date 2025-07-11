@@ -1,6 +1,7 @@
 import streamlit as st
 from datetime import date
 from transform import *
+from modelo import *
 
 st.title('Gerador de plano de aula')
 st.caption('Preencha o formulário e submeta para baixar o plano!')
@@ -15,7 +16,7 @@ faixa_data = st.date_input("Faixa de dias do plano",
     (date(2025, 1, 1), date(2025, 1, 31)),
     min_value= date(2025, 1, 1),
     max_value= date(2025, 12, 31),
-    format="DD.MM.YYYY",
+    format="DD/MM/YYYY",
 )
 aulas = []
 
@@ -24,6 +25,9 @@ if disciplina:
     aula = qtde_aulas(df, ano, bimestre)
     for a in range(1, aula + 1):
         aulas.append(a)
-    opc = st.multiselect('Selecione',aulas)
-    st.text(aulas)
-            
+    opc = st.multiselect('Selecione', aulas)
+    dataf = filtro(df, ano, bimestre, opc)
+    st.dataframe(dataf)
+
+
+

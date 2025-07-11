@@ -31,8 +31,13 @@ def qtde_aulas(df, ano_serie, bimestre):
 
 
 def filtro(df, ano_serie, bimestre, aula):
-    df_filtrado = df[(df['ANO/SÉRIE'] == ano_serie) & (df['BIMESTRE'] == bimestre) & (df['AULA'] == aula)]
+    df_filtrado = df[
+        (df['ANO/SÉRIE'] == ano_serie) &
+        (df['BIMESTRE'] == bimestre) &
+        (df['AULA'].isin(aula))
+    ]
     return df_filtrado
+
 
 
 
