@@ -30,9 +30,10 @@ recursos = []
 for opcao in opcoes:
     if st.checkbox(opcao):
         recursos.append(opcao)
+recursos_texto = ", ".join(recursos)
 
 aulas = []
-buffer = None  # Inicializa fora do bloco
+buffer = None
 
 if disciplina:
     df = data_frame(planilha, disciplina)
@@ -40,71 +41,138 @@ if disciplina:
     for a in range(1, qt_aula + 1):
         aulas.append(a)
 
-    aula = st.multiselect('Selecione as aulas desejadas', aulas)
+    aula = st.multiselect(
+        'Selecione as aulas desejadas',
+        aulas,
+        max_selections=2,
+        placeholder="Escolha as aulas (máximo 2 aulas)"
+    )
 
     if aula:
-        aula_key = "_".join(map(str, aula))
-        dataf = filtro(df, ano, bimestre, aula)
         data_atual = datetime.now().strftime('%d/%m/%Y')
 
-        st.markdown("### Visualize os dados filtrados:")
-        st.dataframe(dataf)
+        # Inicializa variáveis para cada semana (caso só 1 aula seja escolhida)
+        atividades_1 = estrategias_1 = recuperacao_1 = ""
+        atividades_2 = estrategias_2 = recuperacao_2 = ""
+        objeto_conhecimento_1 = habilidades_1 = ""
+        objeto_conhecimento_2 = habilidades_2 = ""
 
-        # Textos editáveis gerados pelo Gemini
-        with st.spinner("⏳ Gerando conteúdo do plano de aula... isso pode levar alguns segundos..."):
-            if f"atividades_{aula_key}" not in st.session_state:
-                st.session_state[f"atividades_{aula_key}"] = gemini_ativi(dataf['CONTEÚDO'].unique()[0])
-                st.session_state[f"estrategias_{aula_key}"] = gemini_estrat(dataf['OBJETIVOS'].unique()[0])
-                st.session_state[f"recuperacao_{aula_key}"] = gemini_rec(dataf['OBJETIVOS'].unique()[0])
+        for idx, a in enumerate(aula, start=1):
+            dataf = filtro(df, ano, bimestre, [a])
+            aula_key = f"aula_{a}"
 
-        
-        texto_atividades = st.text_area(
-            "📝 Atividades sugeridas",
-            st.session_state[f"atividades_{aula_key}"],
-            height=150
+            # Pega apenas o primeiro valor de cada campo (não a lista completa)
+            objeto_conhecimento = dataf['OBJETOS DO CONHECIMENTO'].dropna().unique()[0]
+            habilidades = dataf['HABILIDADE'].dropna().unique()[0]
+
+            st.markdown(f"### Aula {a}")
+            st.dataframe(dataf)
+
+            gerar = st.button(f"Gerar atividades para Aula {a}")
+
+            if gerar:
+                with st.spinner(f"⏳ Gerando conteúdo para Aula {a}..."):
+                    if f"atividades_{aula_key}" not in st.session_state:
+                        st.session_state[f"atividades_{aula_key}"] = gemini_ativi(
+                            " ".join(dataf['CONTEÚDO'].dropna())
+                        )
+                        st.session_state[f"estrategias_{aula_key}"] = gemini_estrat(
+                            " ".join(dataf['OBJETIVOS'].dropna())
+                        )
+                        st.session_state[f"recuperacao_{aula_key}"] = gemini_rec(
+                            " ".join(dataf['OBJETIVOS'].dropna())
+                        )
+
+            # Campos editáveis para cada aula
+            texto_atividades = st.text_area(
+                f"📝 Atividades sugeridas - Aula {a}",
+                st.session_state.get(f"atividades_{aula_key}", ""),
+                height=150
             )
-        texto_estrategias = st.text_area(
-            "📚 Estratégias de ensino",
-            st.session_state[f"estrategias_{aula_key}"],
-            height=250
+            texto_estrategias = st.text_area(
+                f"📚 Estratégias de ensino - Aula {a}",
+                st.session_state.get(f"estrategias_{aula_key}", ""),
+                height=200
             )
-        texto_recuperacao = st.text_area(
-            "🔁 Recuperação/Avaliação",
-            st.session_state[f"recuperacao_{aula_key}"],
-            height=150
+            texto_recuperacao = st.text_area(
+                f"🔁 Recuperação/Avaliação - Aula {a}",
+                st.session_state.get(f"recuperacao_{aula_key}", ""),
+                height=150
             )
 
-        # Geração do documento
-        doc = substituir(
-            modelo_path=modelo_docx,
-            nome=nome,
-            disciplina=disciplina,
-            serie=ano,
-            bimestre=bimestre,
-            objeto_conhecimento=dataf['OBJETOS DO CONHECIMENTO'].unique()[0],
-            habilidades=dataf['HABILIDADE'].unique()[0],
-            atividades=texto_atividades,
-            recursos= recursos,
-            estrategias=texto_estrategias,
-            recuperacao=texto_recuperacao,
-            semana_1='Polígonos e Classificação',
-            semana_2='Perímetros de figuras planas',
-            semana_3='Cálculo de áreas',
-            semana_4='Volume de sólidos geométricos',
-            data_inicio=faixa_data[0].strftime('%d/%m/%Y'),
-            data_fim=faixa_data[1].strftime('%d/%m/%Y'),
-            data_atual=data_atual
-        )
+            # Salva os valores de cada semana
+            if idx == 1:
+                atividades_1, estrategias_1, recuperacao_1 = texto_atividades, texto_estrategias, texto_recuperacao
+                objeto_conhecimento_1, habilidades_1 = objeto_conhecimento, habilidades
+            elif idx == 2:
+                atividades_2, estrategias_2, recuperacao_2 = texto_atividades, texto_estrategias, texto_recuperacao
+                objeto_conhecimento_2, habilidades_2 = objeto_conhecimento, habilidades
 
-        buffer = io.BytesIO()
-        doc.save(buffer)
-        buffer.seek(0)        
+        # Garante que nenhum campo fique em branco
+        if not atividades_1:
+            atividades_1 = "Atividades não informadas"
+        if not estrategias_1:
+            estrategias_1 = "Estratégias não informadas"
+        if not recuperacao_1:
+            recuperacao_1 = "Plano de recuperação não informado"
+        if not objeto_conhecimento_1:
+            objeto_conhecimento_1 = "Objeto do conhecimento não informado"
+        if not habilidades_1:
+            habilidades_1 = "Habilidades não informadas"
 
-        button = st.download_button(
-            label="📥 Baixar plano de aula",
-            data=buffer,
-            file_name=f"Plano_{nome}.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
-        if button:
+        if len(aula) > 1:
+            if not atividades_2:
+                atividades_2 = "Atividades não informadas"
+            if not estrategias_2:
+                estrategias_2 = "Estratégias não informadas"
+            if not recuperacao_2:
+                recuperacao_2 = "Plano de recuperação não informado"
+            if not objeto_conhecimento_2:
+                objeto_conhecimento_2 = "Objeto do conhecimento não informado"
+            if not habilidades_2:
+                habilidades_2 = "Habilidades não informadas"
+
+        # Geração final do documento
+        if st.button("Gerar documento final"):
+            doc = substituir(
+                modelo_path=modelo_docx,
+                nome=nome,
+                disciplina=disciplina,
+                serie=ano,
+                bimestre=bimestre,
+
+                # Semana 1
+                objeto_conhecimento_1=objeto_conhecimento_1,
+                habilidades_1=habilidades_1,
+                atividades_1=atividades_1,
+                recursos=recursos_texto,
+                estrategias_1=estrategias_1,
+                recuperacao_1=recuperacao_1,
+                semana_1=f"Aula {aula[0]}" if len(aula) >= 1 else "",
+
+                # Semana 2 (se houver)
+                objeto_conhecimento_2=objeto_conhecimento_2 if len(aula) > 1 else "",
+                habilidades_2=habilidades_2 if len(aula) > 1 else "",
+                atividades_2=atividades_2 if len(aula) > 1 else "",
+                estrategias_2=estrategias_2 if len(aula) > 1 else "",
+                recuperacao_2=recuperacao_2 if len(aula) > 1 else "",
+                semana_2=f"Aula {aula[1]}" if len(aula) > 1 else "",
+
+                # Datas
+                data_inicio=faixa_data[0].strftime('%d/%m/%Y'),
+                data_fim=faixa_data[1].strftime('%d/%m/%Y'),
+                data_atual=data_atual
+            )
+
+            buffer = io.BytesIO()
+            doc.save(buffer)
+            buffer.seek(0)
+
             st.success("✅ Plano de aula gerado com sucesso!")
+            st.download_button(
+                label="📥 Baixar plano de aula",
+                data=buffer,
+                file_name=f"Plano_{nome}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+
