@@ -1,5 +1,5 @@
 import streamlit as st
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from transform import *
 from modelo import substituir
 from gerador import gemini_ativi, gemini_estrat, gemini_rec
@@ -8,6 +8,7 @@ import io
 st.title('Gerador de plano de aula')
 st.caption('Preencha o formulário e edite os campos abaixo para gerar seu plano!')
 
+# Aumentar as opções de escopo
 planilha = 'Escopo.xlsx'
 modelo_docx = './Modelo Plano de AULA.docx'
 
@@ -19,11 +20,34 @@ ano = st.selectbox('Ano/série:', ['1ª', '2ª', '3ª'])
 bimestre = st.selectbox('Bimestre', ['1º', '2º', '3º', '4º'])
 faixa_data = st.date_input(
     "Faixa de dias do plano",
-    (date(2025, 1, 1), date(2025, 1, 31)),
-    min_value=date(2025, 1, 1),
+    (date(2025, 7, 21), date(2025, 12, 31)),
+    min_value=date(2025, 7, 21),
     max_value=date(2025, 12, 31),
     format="DD/MM/YYYY"
 )
+# Garante que sempre temos início e fim sem erro
+if isinstance(faixa_data, tuple) and len(faixa_data) == 2:
+    data_inicio = faixa_data[0]
+    data_fim = faixa_data[1]
+else:
+    # Enquanto o usuário ainda não selecionou a segunda data
+    data_inicio = faixa_data[0] if isinstance(faixa_data, tuple) else faixa_data
+    data_fim = data_inicio  # usa a mesma data como padrão
+
+# Calcula datas automaticamente
+data_s1_fim = data_inicio + timedelta(days=4)
+data_s2_inicio = data_inicio + timedelta(days=7)
+data_s2_fim = data_inicio + timedelta(days=11)
+
+# Só converte para string quando for usar nos placeholders
+data_inicio_str = data_inicio.strftime('%d/%m/%Y')
+data_fim_str = data_fim.strftime('%d/%m/%Y')
+data_s1_fim_str = data_s1_fim.strftime('%d/%m/%Y')
+data_s2_inicio_str = data_s2_inicio.strftime('%d/%m/%Y')
+data_s2_fim_str = data_s2_fim.strftime('%d/%m/%Y')
+
+data_atual = datetime.now().strftime('%d/%m/%Y')
+
 opcoes = ["Material digital", "Plataformas", "Livro do aluno", "Outros"]
 
 recursos = []
@@ -49,7 +73,6 @@ if disciplina:
     )
 
     if aula:
-        data_atual = datetime.now().strftime('%d/%m/%Y')
 
         # Inicializa variáveis para cada semana (caso só 1 aula seja escolhida)
         atividades_1 = estrategias_1 = recuperacao_1 = ""
@@ -68,11 +91,12 @@ if disciplina:
             st.markdown(f"### Aula {a}")
             st.dataframe(dataf)
 
-            gerar = st.button(f"Gerar atividades para Aula {a}")
+            gerar = st.button(f"Gerar conteúdo para Aula {a}")
 
             if gerar:
                 with st.spinner(f"⏳ Gerando conteúdo para Aula {a}..."):
                     if f"atividades_{aula_key}" not in st.session_state:
+                        st.warning("Professor, REVISE o conteúdo descrito!")
                         st.session_state[f"atividades_{aula_key}"] = gemini_ativi(
                             " ".join(dataf['CONTEÚDO'].dropna())
                         )
@@ -140,6 +164,11 @@ if disciplina:
                 disciplina=disciplina,
                 serie=ano,
                 bimestre=bimestre,
+                
+                # Datas
+                data_inicio=data_inicio_str,
+                data_fim=data_fim_str,
+                data_atual=data_atual,
 
                 # Semana 1
                 objeto_conhecimento_1=objeto_conhecimento_1,
@@ -148,7 +177,7 @@ if disciplina:
                 recursos=recursos_texto,
                 estrategias_1=estrategias_1,
                 recuperacao_1=recuperacao_1,
-                semana_1=f"Aula {aula[0]}" if len(aula) >= 1 else "",
+                semana_1=f"{data_inicio_str} à {data_s1_fim_str}" if len(aula) >= 1 else "",
 
                 # Semana 2 (se houver)
                 objeto_conhecimento_2=objeto_conhecimento_2 if len(aula) > 1 else "",
@@ -156,12 +185,7 @@ if disciplina:
                 atividades_2=atividades_2 if len(aula) > 1 else "",
                 estrategias_2=estrategias_2 if len(aula) > 1 else "",
                 recuperacao_2=recuperacao_2 if len(aula) > 1 else "",
-                semana_2=f"Aula {aula[1]}" if len(aula) > 1 else "",
-
-                # Datas
-                data_inicio=faixa_data[0].strftime('%d/%m/%Y'),
-                data_fim=faixa_data[1].strftime('%d/%m/%Y'),
-                data_atual=data_atual
+                semana_2=f"{data_s2_inicio_str} à {data_s2_fim_str}" if len(aula) > 1 else "",
             )
 
             buffer = io.BytesIO()

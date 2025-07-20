@@ -20,6 +20,9 @@ def substituir(
     disciplina,
     serie,
     bimestre,
+    data_inicio,
+    data_fim,
+    data_atual,
     objeto_conhecimento_1,
     objeto_conhecimento_2,
     habilidades_1,
@@ -33,9 +36,6 @@ def substituir(
     recuperacao_2,
     semana_1,
     semana_2,
-    data_inicio,
-    data_fim,
-    data_atual,
 ):
 
 
@@ -46,6 +46,9 @@ def substituir(
         "@Disciplina": disciplina,
         "@Ano_turma": serie,
         "@Bimestre": bimestre,
+        "@Data_inicio": data_inicio,
+        "@Data_fim": data_fim,
+        "@Data_atual": data_atual,
         "@Objeto_conhecimento_1": objeto_conhecimento_1,
         "@Objeto_conhecimento_2": objeto_conhecimento_2,
         "@Habilidades_1": habilidades_1,
@@ -60,9 +63,6 @@ def substituir(
         "@Recuperacao_2": recuperacao_2,
         "@Semana_1": semana_1,
         "@Semana_2": semana_2,
-        "@Data_inicio": data_inicio,
-        "@Data_fim": data_fim,
-        "@Data_atual": data_atual
     }
 
     for paragrafo in doc.paragraphs:
