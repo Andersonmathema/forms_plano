@@ -10,7 +10,7 @@ st.caption('Preencha o formulário e edite os campos abaixo para gerar seu plano
 
 # Aumentar as opções de escopo
 planilha = 'Escopo.xlsx'
-modelo_docx = './Modelo Plano de AULA.docx'
+modelo_docx = './Plano de Aula 3o. Bimestre - Agosto.docx'
 
 # Dados iniciais
 nome = st.text_input('Seu nome')
@@ -48,7 +48,12 @@ data_s2_fim_str = data_s2_fim.strftime('%d/%m/%Y')
 
 data_atual = datetime.now().strftime('%d/%m/%Y')
 
-opcoes = ["Material digital", "Plataformas", "Livro do aluno", "Outros"]
+opcoes = ["Material digital do Componente",
+          "Livro do Estudante 'Currículo em Ação'",
+          "Livro 'São Paulo em Ação' – Orientação de Estudos",
+          "Plataforma digital",
+          "Outros",
+          ]
 
 recursos = []
 for opcao in opcoes:
