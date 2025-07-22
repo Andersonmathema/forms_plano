@@ -1,6 +1,5 @@
 from docx import Document
 
-
 def substituir_runs(paragrafo, mapa):
     texto_original = "".join(run.text for run in paragrafo.runs)
     texto_modificado = texto_original
@@ -19,50 +18,71 @@ def substituir(
     nome,
     disciplina,
     serie,
-    bimestre,
-    data_inicio,
-    data_fim,
-    data_atual,
-    objeto_conhecimento_1,
-    objeto_conhecimento_2,
+    turma,
+    # Semana 1
     habilidades_1,
-    habilidades_2,
+    objeto_conhecimento_1,
     atividades_1,
-    atividades_2,
-    recursos,
     estrategias_1,
-    estrategias_2,
+    flexibilizacao_1,
+    autoavaliacao_1,
     recuperacao_1,
+    # Semana 2
+    habilidades_2,
+    objeto_conhecimento_2,
+    atividades_2,
+    estrategias_2,
+    flexibilizacao_2,
+    autoavaliacao_2,
     recuperacao_2,
-    semana_1,
-    semana_2,
+    # Semana 3
+    habilidades_3,
+    objeto_conhecimento_3,
+    atividades_3,
+    estrategias_3,
+    flexibilizacao_3,
+    autoavaliacao_3,
+    recuperacao_3,
+    # Recursos (único para todas)
+    recursos
 ):
-
-
     doc = Document(modelo_path)
 
     placeholders = {
         "@Nome": nome,
         "@Disciplina": disciplina,
-        "@Ano_turma": serie,
-        "@Bimestre": bimestre,
-        "@Data_inicio": data_inicio,
-        "@Data_fim": data_fim,
-        "@Data_atual": data_atual,
-        "@Objeto_conhecimento_1": objeto_conhecimento_1,
-        "@Objeto_conhecimento_2": objeto_conhecimento_2,
+        "@Ano": serie,
+        "@Turmas": turma,
+
+        # Recursos (mesmo para as 3 semanas)
+        "@Recursos": recursos,
+
+        # Semana 1
         "@Habilidades_1": habilidades_1,
-        "@Habilidades_2": habilidades_2,
+        "@Objeto_do_conhecimento_1": objeto_conhecimento_1,
         "@Atividades_1": atividades_1,
-        "@Atividades_2": atividades_2,
-        "@Recursos_1": recursos,
-        "@Recursos_2": recursos,
         "@Estrategias_1": estrategias_1,
-        "@Estrategias_2": estrategias_2,
+        "@Flexibilizacao_1": flexibilizacao_1,
+        "@Autoavaliacao_1": autoavaliacao_1,
         "@Recuperacao_1": recuperacao_1,
+
+        # Semana 2
+        "@Habilidades_2": habilidades_2,
+        "@Objeto_do_conhecimento_2": objeto_conhecimento_2,
+        "@Atividades_2": atividades_2,
+        "@Estrategias_2": estrategias_2,
+        "@Flexibilizacao_2": flexibilizacao_2,
+        "@Autoavaliacao_2": autoavaliacao_2,
         "@Recuperacao_2": recuperacao_2,
-        "@Semana_1": semana_1,
-        "@Semana_2": semana_2,
+
+        # Semana 3
+        "@Habilidades_3": habilidades_3,
+        "@Objeto_do_conhecimento_3": objeto_conhecimento_3,
+        "@Atividades_3": atividades_3,
+        "@Estrategias_3": estrategias_3,
+        "@Flexibilizacao_3": flexibilizacao_3,
+        "@Autoavaliacao_3": autoavaliacao_3,
+        "@Recuperacao_3": recuperacao_3,
     }
 
     for paragrafo in doc.paragraphs:
@@ -75,6 +95,7 @@ def substituir(
                     substituir_runs(paragrafo, placeholders)
 
     return doc
+
 
 
             
