@@ -1,130 +1,114 @@
-from docx import Document
+from openpyxl import load_workbook
 
-def substituir_runs(paragrafo, mapa):
-    texto_original = "".join(run.text for run in paragrafo.runs)
-    texto_modificado = texto_original
-
-    for chave, valor in mapa.items():
-        texto_modificado = texto_modificado.replace(str(chave), str(valor))
-
-    if texto_original != texto_modificado:
-        for _ in paragrafo.runs:
-            _._element.getparent().remove(_._element)
-        paragrafo.add_run(texto_modificado)
-
-
-def substituir(
+def substituir_planilha(
     modelo_path,
     nome,
     disciplina,
     serie,
     turma,
+    recursos,
+    # Datas (início e fim de cada semana)
+    data_s1_inicio, data_s1_fim,
+    data_s2_inicio, data_s2_fim,
+    data_s3_inicio, data_s3_fim,
     # Semana 1
-    habilidades_1,
-    objeto_conhecimento_1,
-    atividades_1,
-    estrategias_1,
-    flexibilizacao_1,
-    autoavaliacao_1,
-    recuperacao_1,
+    aulas_s1, habilidades_s1, metodologia_s1,
     # Semana 2
-    habilidades_2,
-    objeto_conhecimento_2,
-    atividades_2,
-    estrategias_2,
-    flexibilizacao_2,
-    autoavaliacao_2,
-    recuperacao_2,
+    aulas_s2, habilidades_s2, metodologia_s2,
     # Semana 3
-    habilidades_3,
-    objeto_conhecimento_3,
-    atividades_3,
-    estrategias_3,
-    flexibilizacao_3,
-    autoavaliacao_3,
-    recuperacao_3,
-    # Recursos (único para todas)
-    recursos
+    aulas_s3, habilidades_s3, metodologia_s3,
+    output_path="PlanoGerado.xlsx"
 ):
-    doc = Document(modelo_path)
+    """
+    Substitui os placeholders na planilha modelo, salvando como um novo arquivo.
 
-    placeholders = {
-        "@Nome": nome,
-        "@Disciplina": disciplina,
-        "@Ano": serie,
-        "@Turmas": turma,
+    Placeholders suportados:
+      #Nome, #Disciplina, #Ano, #Turmas, #Recursos
+      #Data_S1_inicio, #Data_S1_fim, #Data_S2_inicio, #Data_S2_fim, #Data_S3_inicio, #Data_S3_fim
+      #Aulas_S1, #Aulas_S2, #Aulas_S3
+      #Habilidades_S1, #Habilidades_S2, #Habilidades_S3
+      #Metodologia_S1, #Metodologia_S2, #Metodologia_S3
+    """
+    wb = load_workbook(modelo_path)
+    ws = wb.active  # Considera a primeira aba
 
-        # Recursos (mesmo para as 3 semanas)
-        "@Recursos": recursos,
+    # Mapa de placeholders com "#"
+    mapa = {
+        "#Nome": nome,
+        "#Disciplina": disciplina,
+        "#Ano": serie,
+        "#Turmas": turma,
+        "#Recursos": recursos,
+
+        # Datas
+        "#Data_S1_inicio": data_s1_inicio,
+        "#Data_S1_fim": data_s1_fim,
+        "#Data_S2_inicio": data_s2_inicio,
+        "#Data_S2_fim": data_s2_fim,
+        "#Data_S3_inicio": data_s3_inicio,
+        "#Data_S3_fim": data_s3_fim,
 
         # Semana 1
-        "@Habilidades_1": habilidades_1,
-        "@Objeto_do_conhecimento_1": objeto_conhecimento_1,
-        "@Atividades_1": atividades_1,
-        "@Estrategias_1": estrategias_1,
-        "@Flexibilizacao_1": flexibilizacao_1,
-        "@Autoavaliacao_1": autoavaliacao_1,
-        "@Recuperacao_1": recuperacao_1,
+        "#Aulas_S1": aulas_s1,
+        "#Habilidades_S1": habilidades_s1,
+        "#Metodologia_S1": metodologia_s1,
 
         # Semana 2
-        "@Habilidades_2": habilidades_2,
-        "@Objeto_do_conhecimento_2": objeto_conhecimento_2,
-        "@Atividades_2": atividades_2,
-        "@Estrategias_2": estrategias_2,
-        "@Flexibilizacao_2": flexibilizacao_2,
-        "@Autoavaliacao_2": autoavaliacao_2,
-        "@Recuperacao_2": recuperacao_2,
+        "#Aulas_S2": aulas_s2,
+        "#Habilidades_S2": habilidades_s2,
+        "#Metodologia_S2": metodologia_s2,
 
         # Semana 3
-        "@Habilidades_3": habilidades_3,
-        "@Objeto_do_conhecimento_3": objeto_conhecimento_3,
-        "@Atividades_3": atividades_3,
-        "@Estrategias_3": estrategias_3,
-        "@Flexibilizacao_3": flexibilizacao_3,
-        "@Autoavaliacao_3": autoavaliacao_3,
-        "@Recuperacao_3": recuperacao_3,
+        "#Aulas_S3": aulas_s3,
+        "#Habilidades_S3": habilidades_s3,
+        "#Metodologia_S3": metodologia_s3,
     }
 
-    for paragrafo in doc.paragraphs:
-        substituir_runs(paragrafo, placeholders)
+    # Substitui placeholders em todas as células
+    for row in ws.iter_rows():
+        for cell in row:
+            if cell.value and isinstance(cell.value, str):
+                for chave, valor in mapa.items():
+                    if chave in cell.value:
+                        cell.value = cell.value.replace(chave, str(valor))
 
-    for tabela in doc.tables:
-        for linha in tabela.rows:
-            for celula in linha.cells:
-                for paragrafo in celula.paragraphs:
-                    substituir_runs(paragrafo, placeholders)
-
-    return doc
+    wb.save(output_path)
+    return output_path
 
 
+# Teste rápido para verificar substituições
+if __name__ == "__main__":
+    resultado = substituir_planilha(
+        modelo_path="./MODELO PLANO DE AULA PARCIAIS.xlsx",
+        nome="Anderson",
+        disciplina="Matemática",
+        serie="3º EM",
+        turma="A",
+        recursos="- Livro do Estudante\n- Plataforma Digital",
 
-            
-    
-# if __name__ == "__main__":
-#     doc = substituir(
-#         modelo_path='./Modelo Plano de AULA.docx',
-#         nome='Anderson',
-#         disciplina='Matemática',
-#         serie='3ª',
-#         bimestre='3º',
-#         objeto_conhecimento_1='Geometria: Áreas',
-#         objeto_conhecimento_2='Geometria: Áreas',
-#         habilidades_1='EF09MA10, EF09MA12',
-#         habilidades_2='EF09MA10, EF09MA12',
-#         atividades_1='Problemas contextualizados com cálculos de área',
-#         atividades_2='Problemas contextualizados com cálculos de área',
-#         recursos ='Livro didático, geoplano digital',
-#         estrategias_1='Metodologias ativas e trabalho em grupo',
-#         estrategias_2='Metodologias ativas e trabalho em grupo',
-#         recuperacao_1='Atividades diferenciadas com uso de softwares',
-#         recuperacao_2='Atividades diferenciadas com uso de softwares',
-#         semana_1='Polígonos e Classificação',
-#         semana_2='Perímetros de figuras planas',
-#         data_inicio='06/01/2025',
-#         data_fim='31/01/2025',
-#         data_atual='11/07/2025'
-#     )
+        # Datas (teste)
+        data_s1_inicio="05/08/2025", data_s1_fim="09/08/2025",
+        data_s2_inicio="12/08/2025", data_s2_fim="16/08/2025",
+        data_s3_inicio="19/08/2025", data_s3_fim="23/08/2025",
 
-#     doc.save("./modelo2.docx")
+        # Semana 1
+        aulas_s1="Aulas 1 a 4",
+        habilidades_s1="EF09MA10, EF09MA12",
+        metodologia_s1="Aulas expositivas com resolução de problemas e uso de Geogebra.",
+
+        # Semana 2
+        aulas_s2="Aulas 5 a 8",
+        habilidades_s2="EF09MA13, EF09MA15",
+        metodologia_s2="Atividades em grupos e debates guiados para construção do conhecimento.",
+
+        # Semana 3
+        aulas_s3="Aulas 9 a 12",
+        habilidades_s3="EF09MA16",
+        metodologia_s3="Oficinas práticas com exercícios de aplicação e atividades avaliativas."
+    )
+
+    print(f"Plano gerado: {resultado}")
+
+
     
 
