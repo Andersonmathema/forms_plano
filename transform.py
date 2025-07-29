@@ -30,29 +30,43 @@ def qtde_aulas(df, ano_serie, bimestre):
 
 
 
-def filtro(df, ano_serie, bimestre, aula):
+def filtro(df, ano_serie, bimestre, aulas):
+    """
+    Filtra o DataFrame do escopo pelas colunas padrão:
+      - ANO/SÉRIE
+      - BIMESTRE
+      - AULA (pode ser um único valor ou lista)
+
+    Retorna apenas as colunas necessárias para o plano.
+    """
+    # Garante que aulas sempre seja uma lista
+    if isinstance(aulas, (int, str)):
+        aulas = [aulas]
+
     df_filtrado = df[
         (df['ANO/SÉRIE'] == ano_serie) &
         (df['BIMESTRE'] == bimestre) &
-        (df['AULA'].isin(aula))
-    ]
-    return df_filtrado
+        (df['AULA'].isin(aulas))
+    ][['AULA', 'HABILIDADE', 'OBJETOS DO CONHECIMENTO', 'CONTEÚDO', 'OBJETIVOS']]
+
+    return df_filtrado.reset_index(drop=True)
 
 
 
 
 
-# if __name__ == '__main__':
-#     data = 'Escopo.xlsx'
-#     df = data_frame(data, 'Matemática')
-#     ano = input("O Ano-série: ")
-#     bimestre = input('O bimestre: ')
-#     df_filtrado = df[(df['ANO/SÉRIE'] == ano) & (df['BIMESTRE'] == bimestre)].shape[0]
-#     print(df_filtrado)
-#     aula = int(input('A aula: '))
-#     disciplina = disciplinas(df=data)
-#     print(disciplina)
-#     df_escolhido = filtro(df=df, bimestre=bimestre, ano_serie=ano, aula = aula)
-#     print(df_escolhido)
 
-#     #print(df)
+if __name__ == '__main__':
+    data = './Escopo_EM_2025.xlsx'
+    df = data_frame(data, 'Matemática')
+    ano = input("O Ano-série: ")
+    bimestre = input('O bimestre: ')
+    df_filtrado = df[(df['ANO/SÉRIE'] == ano) & (df['BIMESTRE'] == bimestre)].shape[0]
+    #print(df_filtrado)
+    aula = int(input('A aula: '))
+    disciplina = disciplinas(df=data)
+    #print(disciplina)
+    df_escolhido = filtro(df=df, bimestre=bimestre, ano_serie=ano, aulas = aula)
+    df_escolhido.to_csv('./data.csv', sep=';')
+
+    #print(df)

@@ -6,65 +6,68 @@ def substituir_planilha(
     disciplina,
     serie,
     turma,
+    aulas_semanais,
     recursos,
     # Datas (início e fim de cada semana)
-    data_s1_inicio, data_s1_fim,
-    data_s2_inicio, data_s2_fim,
-    data_s3_inicio, data_s3_fim,
-    # Semana 1
-    aulas_s1, habilidades_s1, metodologia_s1,
-    # Semana 2
-    aulas_s2, habilidades_s2, metodologia_s2,
-    # Semana 3
-    aulas_s3, habilidades_s3, metodologia_s3,
+    datas_semanas,
+    # Para cada semana: (aulas, objetivo, objeto, habilidades, metodologia, proposta)
+    semanas_info,
     output_path="PlanoGerado.xlsx"
 ):
     """
-    Substitui os placeholders na planilha modelo, salvando como um novo arquivo.
+    Substitui todos os placeholders na aba 'Agosto' do modelo.
 
-    Placeholders suportados:
-      #Nome, #Disciplina, #Ano, #Turmas, #Recursos
-      #Data_S1_inicio, #Data_S1_fim, #Data_S2_inicio, #Data_S2_fim, #Data_S3_inicio, #Data_S3_fim
-      #Aulas_S1, #Aulas_S2, #Aulas_S3
-      #Habilidades_S1, #Habilidades_S2, #Habilidades_S3
-      #Metodologia_S1, #Metodologia_S2, #Metodologia_S3
+    Argumentos:
+        modelo_path: Caminho para o modelo Excel.
+        nome, disciplina, serie, turma: Cabeçalho.
+        aulas_semanais: Nº de aulas por semana (preenche o cabeçalho).
+        recursos: Recursos/Plataforma (mesmo para todas as semanas).
+        datas_semanas: Lista com 4 tuplas (inicio, fim) para S1 a S4.
+        semanas_info: Lista com 4 dicionários, cada um contendo:
+            {
+                "aulas": str,
+                "objetivo": str,
+                "objeto": str,
+                "habilidades": str,
+                "metodologia": str,
+                "proposta": str
+            }
+        output_path: Nome do arquivo gerado.
     """
     wb = load_workbook(modelo_path)
-    ws = wb.active  # Considera a primeira aba
+    if "Agosto" in wb.sheetnames:
+        ws = wb["Agosto"]
+    else:
+        ws = wb.active
 
-    # Mapa de placeholders com "#"
+    # Prepara o mapa de substituição
     mapa = {
         "#Nome": nome,
         "#Disciplina": disciplina,
         "#Ano": serie,
         "#Turmas": turma,
-        "#Recursos": recursos,
-
-        # Datas
-        "#Data_S1_inicio": data_s1_inicio,
-        "#Data_S1_fim": data_s1_fim,
-        "#Data_S2_inicio": data_s2_inicio,
-        "#Data_S2_fim": data_s2_fim,
-        "#Data_S3_inicio": data_s3_inicio,
-        "#Data_S3_fim": data_s3_fim,
-
-        # Semana 1
-        "#Aulas_S1": aulas_s1,
-        "#Habilidades_S1": habilidades_s1,
-        "#Metodologia_S1": metodologia_s1,
-
-        # Semana 2
-        "#Aulas_S2": aulas_s2,
-        "#Habilidades_S2": habilidades_s2,
-        "#Metodologia_S2": metodologia_s2,
-
-        # Semana 3
-        "#Aulas_S3": aulas_s3,
-        "#Habilidades_S3": habilidades_s3,
-        "#Metodologia_S3": metodologia_s3,
+        "#AulasSemana": aulas_semanais,
+        "#Recursos": recursos
     }
 
-    # Substitui placeholders em todas as células
+    # Adiciona dados de cada semana (1 a 4)
+    for i in range(4):
+        prefix = f"S{i+1}"
+        data_inicio, data_fim = datas_semanas[i]
+        info = semanas_info[i]
+
+        mapa.update({
+            f"#Data_{prefix}_inicio": data_inicio,
+            f"#Data_{prefix}_fim": data_fim,
+            f"#Aulas_{prefix}": info.get("aulas", ""),
+            f"#Objetivo_{prefix}": info.get("objetivo", ""),
+            f"#Objeto_{prefix}": info.get("objeto", ""),
+            f"#Habilidades_{prefix}": info.get("habilidades", ""),
+            f"#Metodologia_{prefix}": info.get("metodologia", ""),
+            f"#Proposta_{prefix}": info.get("proposta", "")
+        })
+
+    # Faz a substituição nas células
     for row in ws.iter_rows():
         for cell in row:
             if cell.value and isinstance(cell.value, str):
@@ -76,39 +79,39 @@ def substituir_planilha(
     return output_path
 
 
-# Teste rápido para verificar substituições
-if __name__ == "__main__":
-    resultado = substituir_planilha(
-        modelo_path="./MODELO PLANO DE AULA PARCIAIS.xlsx",
-        nome="Anderson",
-        disciplina="Matemática",
-        serie="3º EM",
-        turma="A",
-        recursos="- Livro do Estudante\n- Plataforma Digital",
+# Teste rápido
+# if __name__ == "__main__":
+#     # Datas de exemplo (4 semanas)
+#     datas = [
+#         ("05/08/2025", "09/08/2025"),
+#         ("12/08/2025", "16/08/2025"),
+#         ("19/08/2025", "23/08/2025"),
+#         ("26/08/2025", "30/08/2025")
+#     ]
 
-        # Datas (teste)
-        data_s1_inicio="05/08/2025", data_s1_fim="09/08/2025",
-        data_s2_inicio="12/08/2025", data_s2_fim="16/08/2025",
-        data_s3_inicio="19/08/2025", data_s3_fim="23/08/2025",
+#     # Dados por semana (exemplo)
+#     semanas = []
+#     for i in range(4):
+#         semanas.append({
+#             "aulas": f"Aulas {i*4+1} a {i*4+4}",
+#             "objetivo": f"Objetivo geral da semana {i+1}.",
+#             "objeto": f"Conteúdo/Objeto da semana {i+1}.",
+#             "habilidades": f"EF09MA1{i+1}, EF09MA2{i+1}",
+#             "metodologia": f"Metodologia planejada para semana {i+1}.",
+#             "proposta": f"Proposta para alunos elegíveis na semana {i+1}."
+#         })
 
-        # Semana 1
-        aulas_s1="Aulas 1 a 4",
-        habilidades_s1="EF09MA10, EF09MA12",
-        metodologia_s1="Aulas expositivas com resolução de problemas e uso de Geogebra.",
+#     resultado = substituir_planilha(
+#         modelo_path="./MODELO PLANO DE AULA PARCIAIS.xlsx",
+#         nome="Anderson",
+#         disciplina="Matemática",
+#         serie="3º EM",
+#         turma="A",
+#         aulas_semanais="4",
+#         recursos="- Livro do Estudante\n- Plataforma Digital",
+#         datas_semanas=datas,
+#         semanas_info=semanas
+#     )
 
-        # Semana 2
-        aulas_s2="Aulas 5 a 8",
-        habilidades_s2="EF09MA13, EF09MA15",
-        metodologia_s2="Atividades em grupos e debates guiados para construção do conhecimento.",
-
-        # Semana 3
-        aulas_s3="Aulas 9 a 12",
-        habilidades_s3="EF09MA16",
-        metodologia_s3="Oficinas práticas com exercícios de aplicação e atividades avaliativas."
-    )
-
-    print(f"Plano gerado: {resultado}")
-
-
-    
+#     print(f"Plano gerado: {resultado}")
 

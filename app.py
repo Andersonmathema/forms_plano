@@ -1,20 +1,22 @@
 import streamlit as st
-from transform import *
-from modelo import substituir
-from gerador import gemini_ativi, gemini_estrat, gemini_rec, gemini_flex, gemini_autoaval
 import io
+from datetime import timedelta
+from transform import data_frame, filtro, qtde_aulas, disciplinas
+from modelo import substituir_planilha
+from gerador import gemini_metodologia, gemini_proposta
 
-st.title('Gerador de Plano de Aula (3 Semanas)')
-st.caption('Preencha os campos abaixo e edite os textos antes de gerar o documento final.')
+st.title("Gerador de Plano de Aula (4 Semanas)")
+st.caption("Preencha os campos e gere automaticamente o plano de aula mensal.")
 
-planilha = 'Escopo.xlsx'
-modelo_docx = './Plano de Aula 3o. Bimestre - Agosto.docx'
+planilha = "./Escopo_EM_2025.xlsx"
+modelo_xlsx = "./MODELO PLANO DE AULA PARCIAIS.xlsx"
 
-# Dados iniciais
-nome = st.text_input('Professor(a)')
-disciplina = st.selectbox('Disciplina', disciplinas(planilha))
-ano = st.selectbox('Ano/série', ['1ª', '2ª', '3ª'])
-turma = st.text_input('Turma (ex: A, B, C)')
+# --- Dados do professor ---
+nome = st.text_input("Professor(a)")
+disciplina = st.selectbox("Disciplina", disciplinas(planilha))
+ano = st.selectbox("Ano/série", ["1ª", "2ª", "3ª"])
+turma = st.text_input("Turma (ex: A, B, C)")
+aulas_semanais = st.number_input("Quantas aulas por semana?", min_value=1, max_value=6, value=4)
 
 opcoes = [
     "Material digital do Componente",
@@ -23,128 +25,85 @@ opcoes = [
     "Plataforma digital",
     "Outros",
 ]
-recursos = []
-for opcao in opcoes:
-    if st.checkbox(opcao):
-        recursos.append(opcao)
-recursos_texto = ", ".join(recursos)
+recursos = [opcao for opcao in opcoes if st.checkbox(opcao)]
+recursos_texto = "\n".join([f"- {item}" for item in recursos])
 
-# Seleção de até 3 semanas (cada semana corresponde a uma aula/conjunto)
+# --- Carregar DataFrame e selecionar aulas ---
 df = data_frame(planilha, disciplina)
-qt_aula = qtde_aulas(df, ano, '3º')  # sempre bimestre 3 neste modelo
-aulas = list(range(1, qt_aula + 1))
+qt_aula = qtde_aulas(df, ano, "3º")  # Considerando bimestre fixo (ajustável)
+aulas_disponiveis = list(range(1, qt_aula + 1))
 
-semanas = st.multiselect(
-    'Selecione até 3 semanas (aulas) para gerar',
-    aulas,
-    max_selections=3
+aulas_selecionadas = st.multiselect(
+    f"Selecione as aulas (máximo {aulas_semanais * 4} para 4 semanas)",
+    aulas_disponiveis,
+    max_selections=aulas_semanais * 4
 )
 
-# Inicializa campos para cada semana
-dados = {
-    1: {"atividades": "", "estrategias": "", "flexibilizacao": "", "autoavaliacao": "", "recuperacao": "",
-        "habilidades": "", "objeto": ""},
-    2: {"atividades": "", "estrategias": "", "flexibilizacao": "", "autoavaliacao": "", "recuperacao": "",
-        "habilidades": "", "objeto": ""},
-    3: {"atividades": "", "estrategias": "", "flexibilizacao": "", "autoavaliacao": "", "recuperacao": "",
-        "habilidades": "", "objeto": ""}
-}
+# --- Função auxiliar para agrupar em 4 semanas ---
+def agrupar_aulas(df, ano, aulas, aulas_semanais):
+    grupos = [aulas[i:i + aulas_semanais] for i in range(0, len(aulas), aulas_semanais)]
+    while len(grupos) < 4:
+        grupos.append([])  # preenche semanas vazias
+    semanas_info = []
+    for grupo in grupos[:4]:
+        if not grupo:
+            semanas_info.append({
+                "aulas": "",
+                "objetivo": "",
+                "objeto": "",
+                "habilidades": "",
+                "metodologia": "",
+                "proposta": ""
+            })
+            continue
+        df_filtrado = filtro(df, ano, "3º", grupo)
+        habilidades = "; ".join(df_filtrado["HABILIDADE"].dropna().unique())
+        objetos = "; ".join(df_filtrado["OBJETOS DO CONHECIMENTO"].dropna().unique())
+        contexto = f"Habilidades: {habilidades}. Objetos: {objetos}."
+        metodologia = gemini_metodologia(contexto)
+        proposta = gemini_proposta(contexto)
+        semanas_info.append({
+            "aulas": f"Aulas {grupo[0]} a {grupo[-1]}",
+            "objetivo": " ".join(df_filtrado["OBJETIVOS"].dropna().unique()),
+            "objeto": objetos,
+            "habilidades": habilidades,
+            "metodologia": metodologia,
+            "proposta": proposta
+        })
+    return semanas_info
 
-for idx, semana in enumerate(semanas, start=1):
-    dataf = filtro(df, ano, '3º', [semana])
-    key = f"semana_{semana}"
+# --- Botão para gerar plano ---
+if st.button("📄 Gerar Plano de Aula (Excel)"):
+    semanas_info = agrupar_aulas(df, ano, aulas_selecionadas, aulas_semanais)
 
-    st.subheader(f"Semana {idx} (Aula {semana})")
-    st.dataframe(dataf)
+    # Datas fictícias (ajuste conforme necessário)
+    datas_semanas = []
+    inicio_mes = st.date_input("Data inicial do mês")
+    for i in range(4):
+        inicio = inicio_mes + timedelta(days=i * 7)
+        fim = inicio + timedelta(days=4)
+        datas_semanas.append((inicio.strftime("%d/%m/%Y"), fim.strftime("%d/%m/%Y")))
 
-    gerar = st.button(f"Gerar textos (Gemini) - Semana {idx}")
-    if gerar:
-        with st.spinner(f"⏳ Gerando conteúdos para Semana {idx}..."):
-            st.session_state[f"atividades_{key}"] = gemini_ativi(" ".join(dataf['CONTEÚDO'].dropna()))
-            st.session_state[f"estrategias_{key}"] = gemini_estrat(" ".join(dataf['OBJETIVOS'].dropna()))
-            st.session_state[f"flex_{key}"] = gemini_flex(" ".join(dataf['OBJETIVOS'].dropna()))
-            st.session_state[f"auto_{key}"] = gemini_autoaval(" ".join(dataf['OBJETIVOS'].dropna()))
-            st.session_state[f"recuperacao_{key}"] = gemini_rec(" ".join(dataf['OBJETIVOS'].dropna()))
-
-    # Campos editáveis
-    dados[idx]["atividades"] = st.text_area(
-        f"📝 Atividades - Semana {idx}",
-        st.session_state.get(f"atividades_{key}", ""),
-        height=150
-    )
-    dados[idx]["estrategias"] = st.text_area(
-        f"📚 Estratégias - Semana {idx}",
-        st.session_state.get(f"estrategias_{key}", ""),
-        height=150
-    )
-    dados[idx]["flexibilizacao"] = st.text_area(
-        f"♿ Flexibilização Curricular (DUA, AEE) - Semana {idx}",
-        st.session_state.get(f"flex_{key}", ""),
-        height=100
-    )
-    dados[idx]["autoavaliacao"] = st.text_area(
-        f"🧐 Autoavaliação Docente - Semana {idx}",
-        st.session_state.get(f"auto_{key}", ""),
-        height=100
-    )
-    dados[idx]["recuperacao"] = st.text_area(
-        f"🔁 Avaliação e Recuperação - Semana {idx}",
-        st.session_state.get(f"recuperacao_{key}", ""),
-        height=100
-    )
-    dados[idx]["habilidades"] = "; ".join(dataf['HABILIDADE'].dropna().unique())
-    dados[idx]["objeto"] = "; ".join(dataf['OBJETOS DO CONHECIMENTO'].dropna().unique())
-
-# Botão final para gerar o Word
-if st.button("📄 Gerar Plano de Aula (Word)"):
-    doc = substituir(
-        modelo_path=modelo_docx,
+    plano_final = substituir_planilha(
+        modelo_path=modelo_xlsx,
         nome=nome,
         disciplina=disciplina,
         serie=ano,
         turma=turma,
-
-        # Semana 1
-        habilidades_1=dados[1]["habilidades"],
-        objeto_conhecimento_1=dados[1]["objeto"],
-        atividades_1=dados[1]["atividades"],
-        estrategias_1=dados[1]["estrategias"],
-        flexibilizacao_1=dados[1]["flexibilizacao"],
-        autoavaliacao_1=dados[1]["autoavaliacao"],
-        recuperacao_1=dados[1]["recuperacao"],
-
-        # Semana 2
-        habilidades_2=dados[2]["habilidades"],
-        objeto_conhecimento_2=dados[2]["objeto"],
-        atividades_2=dados[2]["atividades"],
-        estrategias_2=dados[2]["estrategias"],
-        flexibilizacao_2=dados[2]["flexibilizacao"],
-        autoavaliacao_2=dados[2]["autoavaliacao"],
-        recuperacao_2=dados[2]["recuperacao"],
-
-        # Semana 3
-        habilidades_3=dados[3]["habilidades"],
-        objeto_conhecimento_3=dados[3]["objeto"],
-        atividades_3=dados[3]["atividades"],
-        estrategias_3=dados[3]["estrategias"],
-        flexibilizacao_3=dados[3]["flexibilizacao"],
-        autoavaliacao_3=dados[3]["autoavaliacao"],
-        recuperacao_3=dados[3]["recuperacao"],
-
-        # Recursos
-        recursos=recursos_texto
+        aulas_semanais=aulas_semanais,
+        recursos=recursos_texto,
+        datas_semanas=datas_semanas,
+        semanas_info=semanas_info
     )
 
-    buffer = io.BytesIO()
-    doc.save(buffer)
-    buffer.seek(0)
+    with open(plano_final, "rb") as f:
+        st.download_button(
+            label="📥 Baixar Plano de Aula (Excel)",
+            data=f,
+            file_name=f"Plano_{nome}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    st.success("✅ Plano gerado com sucesso!")
 
-    st.download_button(
-        label="📥 Baixar Plano de Aula",
-        data=buffer,
-        file_name=f"Plano_{nome}.docx",
-        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    )
-    st.success("✅ Plano de Aula gerado com sucesso!")
 
 
